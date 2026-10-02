@@ -1,0 +1,22 @@
+{
+  "_说明": "官方图鉴（df-api 快照）缺失的物品补充。grade/slots 来自公开的大红图鉴文章，只取品质和格数；sources 来自攻略。",
+  "_来源": {
+    "sohu-大红图鉴": "https://www.sohu.com/a/937327976_122511859",
+    "18183-潮汐监狱": "https://www.18183.com/gonglue/202607/5sbgtvva.html"
+  },
+  "items": {
+    "ECMO": { "grade": 6, "slots": 9, "ref": "sohu-大红图鉴" },
+    "医疗机械人": { "grade": 6, "slots": 6, "ref": "sohu-大红图鉴" },
+    "“纵横”": { "grade": 6, "slots": 9, "ref": "sohu-大红图鉴", "sources": [["巴克什", "巴别塔"]] },
+    "万金泪冠": { "grade": 6, "slots": 9, "ref": "sohu-大红图鉴", "sources": [["巴克什", "巴别塔"]] },
+    "雷斯的留声机": { "grade": 6, "slots": 6, "ref": "sohu-大红图鉴" },
+    "动力电池组": { "grade": 6, "slots": 12, "ref": "sohu-大红图鉴" },
+    "装甲车电池": { "grade": 6, "slots": 6, "ref": "sohu-大红图鉴" },
+    "微型反应炉": { "grade": 6, "slots": 9, "ref": "sohu-大红图鉴" },
+    "海洋之泪": { "grade": 6, "slots": 1, "ref": "sohu-大红图鉴", "sources": [["潮汐监狱", "三级监狱权限卡房"]] },
+    "“天圆地方”": { "grade": 6, "slots": 4, "ref": "sohu-大红图鉴" },
+    "“钻石”鱼子酱": { "grade": 6, "slots": 1, "ref": "sohu-大红图鉴" },
+    "Alpha脑机实验数据-渡鸦": { "grade": 6, "slots": 1, "ref": "sohu-大红图鉴" },
+    "潮汐监狱地图-4": { "grade": 6, "slots": 2, "ref": "sohu-大红图鉴" }
+  }
+}

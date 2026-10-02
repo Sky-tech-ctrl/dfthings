@@ -3,200 +3,147 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>三角洲熟图模拟器</title>
+<title>三角洲变卖物统计</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
-<!-- 主菜单 -->
-<section id="menu" class="screen active">
-  <div class="menu-wrap">
-    <h1>三角洲熟图模拟器</h1>
-    <p class="sub">第一人称跑图 · 刷卡开房 · 开箱搜包 · 熟图测验 · 地图校正</p>
-    <div id="map-list" class="map-list"></div>
-    <p class="notice">房卡名单来自公开攻略整理；区域方位与房间位置是<b>示意布局</b>，不是官方地图坐标。
-      可在「地图编辑」里导入真实地图截图当底图，把点位拖到正确位置，保存后全模式生效，也可导出 JSON 分享。</p>
+<header>
+  <div class="brand">
+    <h1>三角洲变卖物统计</h1>
+    <span id="meta" class="muted"></span>
   </div>
-</section>
+  <nav id="tabs">
+    <button data-tab="items" class="on">物品总览</button>
+    <button data-tab="stats">分级统计</button>
+    <button data-tab="log">出货记录 · 概率</button>
+    <button data-tab="about">数据说明</button>
+  </nav>
+</header>
 
-<!-- 出发前配置 -->
-<section id="loadout" class="screen">
-  <div class="panel loadout-panel">
-    <h2 id="lo-title"></h2>
-    <p id="lo-desc" class="sub"></p>
-    <div class="lo-cols">
-      <div>
-        <h3>携带房卡 <button id="lo-all" class="mini">全选</button> <button id="lo-none" class="mini">清空</button></h3>
-        <div id="lo-cards" class="card-list"></div>
+<main>
+  <!-- 物品总览 -->
+  <section id="tab-items" class="tab on">
+    <div class="filters">
+      <input id="f-q" type="search" placeholder="搜索物品名…">
+      <div class="chips" id="f-cat"></div>
+      <div class="chips" id="f-tier"></div>
+      <label>地图 <select id="f-map"></select></label>
+      <label>排序 <select id="f-sort">
+        <option value="price">价格 高→低</option>
+        <option value="per">单格价值 高→低</option>
+        <option value="grade">品质 高→低</option>
+        <option value="name">名称</option>
+      </select></label>
+      <label title="格子数 ≥ 这个值算「大」，否则算「小」">大/小分界 <select id="f-th">
+        <option value="4">≥4 格</option>
+        <option value="6">≥6 格</option>
+        <option value="9">≥9 格</option>
+      </select></label>
+    </div>
+    <div id="count" class="muted"></div>
+    <div class="table-wrap">
+      <table id="items">
+        <thead><tr><th></th><th>名称</th><th>分档</th><th>格子</th><th class="num">价格</th><th class="num">单格价值</th><th>出现位置</th><th>属性</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 分级统计 -->
+  <section id="tab-stats" class="tab">
+    <div class="filters">
+      <div class="chips" id="s-cat"></div>
+      <span class="muted">分档按「大/小分界」设置计算（在物品总览里改）</span>
+    </div>
+    <div id="s-tiles" class="tiles"></div>
+    <div class="grid2">
+      <div class="card"><h3>各分档物品数量</h3><div id="s-bars"></div></div>
+      <div class="card"><h3>各分档价格（中位数）</h3><div id="s-price"></div></div>
+    </div>
+    <div class="card"><h3>分档 × 出现地图（物品数）</h3><p class="muted">只统计有产出地数据的物品；一件物品可能在多张图出现。</p><div class="table-wrap"><table id="s-matrix"></table></div></div>
+    <div class="card"><h3>各分档最值钱的物品</h3><div id="s-top" class="top-grid"></div></div>
+  </section>
+
+  <!-- 出货记录 -->
+  <section id="tab-log" class="tab">
+    <div class="card">
+      <h3>记一箱</h3>
+      <p class="muted">每开一个箱子（或搜一个包）记一笔，空箱也要记，否则概率会偏高。数据只存在本机浏览器里，可以导出备份。</p>
+      <div class="form-row">
+        <label>地图 <select id="l-map"></select></label>
+        <label>模式 <select id="l-mode"></select></label>
+        <label>容器 <select id="l-box"></select></label>
       </div>
-      <div>
-        <h3>本局设置</h3>
-        <label class="row">今日密码：<b id="lo-code" class="code"></b></label>
-        <p class="hint" id="lo-code-where"></p>
-        <label class="row">地图标签
-          <select id="lo-labels">
-            <option value="all">全部显示</option>
-            <option value="areas">只显示区域名</option>
-            <option value="none">全部隐藏（熟图挑战）</option>
-          </select>
-        </label>
-        <label class="row">对局时长
-          <select id="lo-time">
-            <option value="1800">30 分钟</option>
-            <option value="900">15 分钟</option>
-            <option value="0">不限时</option>
-          </select>
-        </label>
-        <label class="row">出生点
-          <select id="lo-spawn"><option value="-1">随机</option></select>
-        </label>
-        <div class="keys">
-          <b>操作</b><br>
-          WASD 移动 · Shift 冲刺 · 空格 跳 · 鼠标 视角<br>
-          E 开门/开箱/搜包 · F 全部拿取 · Tab 背包<br>
-          M 全图 · Esc 暂停
-        </div>
+      <div class="form-row">
+        <input id="l-item" list="l-items" placeholder="输入物品名，回车添加（可加多件）">
+        <datalist id="l-items"></datalist>
+        <button id="l-add">添加物品</button>
+      </div>
+      <div id="l-chips" class="chips"></div>
+      <div class="form-row">
+        <button id="l-save" class="primary">保存这一箱</button>
+        <button id="l-empty">记一个空箱</button>
+        <span id="l-msg" class="muted"></span>
       </div>
     </div>
-    <div class="btns">
-      <button id="lo-back">返回</button>
-      <button id="lo-start" class="primary">出发</button>
+
+    <div class="filters">
+      <label>地图 <select id="p-map"></select></label>
+      <label>模式 <select id="p-mode"></select></label>
+      <label>容器 <select id="p-box"></select></label>
     </div>
-  </div>
-</section>
-
-<!-- 3D 对局 -->
-<section id="game" class="screen">
-  <div id="view3d"></div>
-  <div id="crosshair">+</div>
-  <div id="hud-top">
-    <div id="hud-map"></div>
-    <div id="hud-time"></div>
-    <div id="hud-value"></div>
-    <div id="hud-where"></div>
-  </div>
-  <canvas id="minimap"></canvas>
-  <div id="prompt"></div>
-  <div id="progress"><div id="progress-bar"></div><span id="progress-text"></span></div>
-  <div id="msgs"></div>
-
-  <div id="loot" class="panel overlay-panel hidden">
-    <div class="loot-head"><h3 id="loot-title"></h3><span class="hint">点击物品拿取 · F 全部拿取 · E/Esc 关闭</span></div>
-    <div id="loot-grid" class="item-grid"></div>
-    <div class="btns"><button id="loot-all" class="primary">全部拿取 (F)</button><button id="loot-close">关闭 (E)</button></div>
-  </div>
-
-  <div id="bag" class="panel overlay-panel hidden">
-    <div class="loot-head"><h3>背包 <span id="bag-sum"></span></h3><span class="hint">Tab 关闭</span></div>
-    <div id="bag-grid" class="item-grid"></div>
-    <h3>房卡</h3>
-    <div id="bag-cards" class="card-tags"></div>
-  </div>
-
-  <div id="fullmap" class="hidden"><canvas id="fullmap-canvas"></canvas><div class="fm-hint">M 关闭 · 滚轮缩放 · 右键拖动</div></div>
-
-  <div id="codebox" class="panel overlay-panel hidden">
-    <h3>输入密码</h3>
-    <input id="code-input" maxlength="4" inputmode="numeric" autocomplete="off">
-    <div class="btns"><button id="code-ok" class="primary">确定</button><button id="code-cancel">取消</button></div>
-  </div>
-
-  <div id="pause" class="panel overlay-panel hidden">
-    <h2>已暂停</h2>
-    <div class="btns col">
-      <button id="pause-resume" class="primary">继续</button>
-      <button id="pause-quit">放弃撤离（损失物资）</button>
+    <div id="p-tiles" class="tiles"></div>
+    <div class="card">
+      <h3>每箱出现概率（实测）</h3>
+      <p class="muted">「每箱概率」= 至少出了一件该分档物品的箱数 ÷ 总箱数；括号内是 95% 置信区间（Wilson），样本少时区间会很宽。</p>
+      <div id="p-tiers"></div>
     </div>
-  </div>
-
-  <div id="clickplay" class="hidden"><div>点击画面开始控制</div></div>
-</section>
-
-<!-- 结算 -->
-<section id="result" class="screen">
-  <div class="panel result-panel">
-    <h2 id="res-title"></h2>
-    <div id="res-stats" class="stats"></div>
-    <div id="res-items" class="item-grid"></div>
-    <div class="btns"><button id="res-again" class="primary">再来一局</button><button id="res-menu">主菜单</button></div>
-  </div>
-</section>
-
-<!-- 熟图测验 -->
-<section id="quiz" class="screen">
-  <canvas id="quiz-canvas"></canvas>
-  <aside class="side">
-    <h2 id="qz-title"></h2>
-    <label class="row">题型
-      <select id="qz-type">
-        <option value="mix">混合</option>
-        <option value="where">点出位置</option>
-        <option value="which">看位置选名字</option>
-      </select>
-    </label>
-    <label class="row"><input type="checkbox" id="qz-areas" checked> 显示区域名</label>
-    <label class="row"><input type="checkbox" id="qz-extract"> 包含撤离点</label>
-    <div id="qz-question" class="question"></div>
-    <div id="qz-options" class="options"></div>
-    <div id="qz-feedback" class="feedback"></div>
-    <div id="qz-score" class="score"></div>
-    <div class="btns col">
-      <button id="qz-next" class="primary">下一题</button>
-      <button id="qz-restart">重新开始（10 题）</button>
-      <button id="qz-back">返回主菜单</button>
+    <div class="grid2">
+      <div class="card"><h3>按容器</h3><div class="table-wrap"><table id="p-boxes"></table></div></div>
+      <div class="card"><h3>出得最多的物品</h3><div class="table-wrap"><table id="p-items"></table></div></div>
     </div>
-  </aside>
-</section>
-
-<!-- 地图编辑 -->
-<section id="editor" class="screen">
-  <canvas id="editor-canvas"></canvas>
-  <aside class="side">
-    <h2 id="ed-title"></h2>
-    <p class="hint">左键选中/拖动 · 拖右下角改大小 · 右键或中键平移 · 滚轮缩放 · Delete 删除。拖动区域会带着里面的房间和箱子一起移动。修改自动保存。</p>
-    <div class="ed-group">
-      <h3>添加（点按钮后在地图上点一下）</h3>
-      <div class="btns wrap">
-        <button data-add="area">区域</button>
-        <button data-add="room">房间</button>
-        <button data-add="extract">撤离点</button>
-        <button data-add="spawn">出生点</button>
+    <div class="card">
+      <h3>记录列表 <span id="p-n" class="muted"></span></h3>
+      <div class="form-row">
+        <button id="p-export">导出 JSON</button>
+        <button id="p-import">导入 JSON</button>
+        <input type="file" id="p-file" accept=".json" hidden>
+        <button id="p-clear" class="danger">清空全部记录</button>
       </div>
-      <label class="row">箱子 <select id="ed-ctype"></select> <button data-add="container">放置</button></label>
+      <div class="table-wrap"><table id="p-list"></table></div>
     </div>
-    <div class="ed-group" id="ed-props"></div>
-    <div class="ed-group">
-      <h3>底图（对照真实地图）</h3>
-      <input type="file" id="ed-bg-file" accept="image/*">
-      <label class="row">透明度 <input type="range" id="ed-bg-alpha" min="0" max="1" step="0.05" value="0.6"></label>
-      <label class="row">X <input type="number" id="ed-bg-x" step="10"> Y <input type="number" id="ed-bg-y" step="10"></label>
-      <label class="row">宽 <input type="number" id="ed-bg-w" step="10"> 高 <input type="number" id="ed-bg-h" step="10"></label>
-      <button id="ed-bg-clear">移除底图</button>
+    <div class="card">
+      <h3>社区经验：容器出货档次</h3>
+      <p class="muted">来自玩家经验分级（<a href="https://news.qq.com/rain/a/20251027A01KIQ00" target="_blank" rel="noopener">腾讯新闻 2025-10</a>），不是官方数据，也没有具体概率，仅供参考。</p>
+      <div id="p-community"></div>
     </div>
-    <div class="ed-group">
-      <h3>布局数据</h3>
-      <div class="btns wrap">
-        <button id="ed-export">导出 JSON</button>
-        <button id="ed-import">导入 JSON</button>
-        <button id="ed-reset">恢复默认布局</button>
+  </section>
+
+  <!-- 数据说明 -->
+  <section id="tab-about" class="tab">
+    <div class="card prose" id="about"></div>
+    <div class="card">
+      <h3>更新价格</h3>
+      <p class="muted">价格快照比较旧。可以导入新的价格 JSON（格式同 <a href="https://github.com/orzice/DeltaForcePrice" target="_blank" rel="noopener">DeltaForcePrice</a> 的 price.json：<code>[{"name": "…", "price": 123}]</code>），只保存在本机。</p>
+      <div class="form-row">
+        <button id="a-price">导入价格 JSON</button>
+        <input type="file" id="a-file" accept=".json" hidden>
+        <button id="a-reset">恢复内置价格</button>
+        <span id="a-msg" class="muted"></span>
       </div>
-      <input type="file" id="ed-import-file" accept=".json,application/json" hidden>
-      <div id="ed-status" class="hint"></div>
     </div>
-    <div class="btns col"><button id="ed-back">返回主菜单</button></div>
-  </aside>
-</section>
+  </section>
+</main>
 
-<div id="toast"></div>
+<div id="drawer" class="hidden">
+  <div class="drawer-body">
+    <button id="d-close" class="close" aria-label="关闭">×</button>
+    <div id="d-content"></div>
+  </div>
+</div>
+<div id="tip" class="hidden"></div>
 
-<script src="vendor/three.min.js"></script>
-<script src="js/data.js"></script>
-<script src="js/layout.js"></script>
-<script src="js/map2d.js"></script>
-<script src="js/loot.js"></script>
-<script src="js/game3d.js"></script>
-<script src="js/quiz.js"></script>
-<script src="js/editor.js"></script>
-<script src="js/main.js"></script>
+<script src="data/items.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
