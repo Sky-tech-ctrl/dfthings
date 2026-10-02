@@ -76,7 +76,9 @@
   }));
 
   // ---------- 物品总览 ----------
-  const F = { q: '', cat: '全部', tier: '全部', map: '全部', sort: 'price' };
+  const F = { q: '', cat: '全部', tier: '全部', map: '全部', mode: '全部', sort: 'price' };
+  const MAP_MODES = META.mapModes || {};
+  const modesOf = it => [...new Set(it.sources.flatMap(s => MAP_MODES[s[0]] || []))];
   function chipGroup(el, values, cur, onPick, withDot) {
     el.innerHTML = values.map(v => `<span class="chip ${v === cur ? 'on' : ''}" data-v="${esc(v)}">${withDot && TIER[v] ? `<span class="dot" style="background:${TIER[v].color}"></span>` : ''}${esc(v)}</span>`).join('');
     el.onclick = e => { const c = e.target.closest('.chip'); if (c) onPick(c.dataset.v); };
@@ -85,6 +87,8 @@
   $('f-th').value = String(threshold);
   $('f-q').addEventListener('input', e => { F.q = e.target.value.trim(); renderItems(); });
   $('f-map').addEventListener('change', e => { F.map = e.target.value; renderItems(); });
+  $('f-mode').innerHTML = ['全部', ...MODES].map(m => `<option>${m}</option>`).join('');
+  $('f-mode').addEventListener('change', e => { F.mode = e.target.value; renderItems(); });
   $('f-sort').addEventListener('change', e => { F.sort = e.target.value; renderItems(); });
   $('f-th').addEventListener('change', e => { threshold = +e.target.value; store.set('threshold', threshold); render(); });
 
@@ -94,7 +98,8 @@
       (F.cat === '全部' || it.cat === F.cat) &&
       (F.tier === '全部' || tierOf(it) === F.tier) &&
       (!q || it.name.toLowerCase().includes(q) || (it.sub || '').includes(q)) &&
-      (F.map === '全部' || (F.map === '无产出地数据' ? !it.sources.length : it.sources.some(s => s[0] === F.map))));
+      (F.map === '全部' || (F.map === '无产出地数据' ? !it.sources.length : it.sources.some(s => s[0] === F.map))) &&
+      (F.mode === '全部' || modesOf(it).includes(F.mode)));
     const per = it => { const p = priceOf(it); return p != null && it.slots ? p / it.slots : -1; };
     const sorters = {
       price: (a, b) => (priceOf(b) ?? -1) - (priceOf(a) ?? -1),
@@ -115,7 +120,7 @@
   }
   function sourcesHTML(it) {
     if (!it.sources.length) return '<span class="muted">—</span>';
-    return it.sources.map(([m, a]) => `<b>${esc(m)}</b>${a ? '·' + esc(a) : ''}`).join('<br>');
+    return it.sources.map(([m, a]) => `<b>${esc(m)}</b>${a ? '·' + esc(a) : ''}${MAP_MODES[m] ? `<span class="muted">（${MAP_MODES[m].join('/')}）</span>` : ''}`).join('<br>');
   }
   function renderItems() {
     chipGroup($('f-cat'), ['全部', ...CATS], F.cat, v => { F.cat = v; renderItems(); });
@@ -161,7 +166,7 @@
         <span>出现位置</span><span>${sourcesHTML(it)}</span>
         ${attrs(it) ? `<span>属性</span><span>${esc(attrs(it))}</span>` : ''}
         <span>你的记录</span><span>${n ? `${hit} / ${n} 箱出过（${(hit / n * 100).toFixed(2)}%）` : '还没有出货记录'}</span>
-        <span>数据来源</span><span>${it.src === 'official' ? '官方图鉴快照' : it.src === 'price-only' ? '仅交易行价格（图鉴未收录，品质未知）' : '补充：' + esc(it.src.split(':')[1])}</span>
+        <span>数据来源</span><span>${{ official: '官方图鉴快照', 'price-only': '仅交易行价格（品质未知）', agent: 'DeltaForceAgent 数据（较新）' }[it.src] || '补充：' + esc(it.src.split(':')[1])}${it.gradeOld != null ? `<br><span class="muted">旧图鉴品质为 ${'白绿蓝紫金红'[it.gradeOld - 1]}，新数据为 ${'白绿蓝紫金红'[it.grade - 1]}，已按新数据</span>` : ''}</span>
       </div>
       ${it.desc ? `<p>${esc(it.desc).replace(/\n/g, '<br>')}</p>` : ''}`;
     $('drawer').classList.remove('hidden');
@@ -377,14 +382,17 @@
       <ul>
         <li><b>品质、格子、产出地、属性</b>：官方图鉴（playerhub.df.qq.com）字段，取自 <a href="https://github.com/zhuba-Ahhh/df-api" target="_blank" rel="noopener">zhuba-Ahhh/df-api</a> 的快照，共 ${c('official')} 件。这份快照偏旧，<b>产出地只覆盖零号大坝、长弓溪谷、航天基地</b>，巴克什和潮汐监狱的新物品不全。</li>
         <li><b>价格</b>：<a href="https://github.com/orzice/DeltaForcePrice" target="_blank" rel="noopener">orzice/DeltaForcePrice</a> 交易行价格，快照日期 ${META.priceFrom}（该项目已于 2026-01-11 停更）。价格随市场波动很大，可在下方导入新价格。护甲/头盔有「破损/几乎全新」等不同状态的价格，详情里可以看到。</li>
-        <li><b>补充</b>：${c('supplement')} 件图鉴缺失的大红，品质和格数取自<a href="https://www.sohu.com/a/937327976_122511859" target="_blank" rel="noopener">公开大红图鉴</a>，海洋之泪产地取自<a href="https://www.18183.com/gonglue/202607/5sbgtvva.html" target="_blank" rel="noopener">攻略</a>。</li>
-        <li><b>仅价格</b>：${c('price-only')} 件只在价格表里出现，图鉴没收录，品质和格子未知。</li>
+        <li><b>补充</b>：海洋之泪、“纵横”、万金泪冠的产出地取自<a href="https://www.18183.com/gonglue/202607/5sbgtvva.html" target="_blank" rel="noopener">攻略</a>和<a href="https://www.sohu.com/a/937327976_122511859" target="_blank" rel="noopener">大红图鉴</a>。</li>
+        <li><b>较新数据补充</b>：${c('agent')} 件旧图鉴没收录的物品（巴克什、潮汐监狱的新物品、新枪等），品质、形状、格数取自 <a href="https://github.com/xxxsy11/DeltaForceAgent" target="_blank" rel="noopener">xxxsy11/DeltaForceAgent</a>（2026-03）。两份数据都收录的 327 件里有 326 件品质一致，唯一的冲突（高级咖啡豆）按新数据处理。</li>
+        <li><b>图片</b>：官方图片（playerhub.df.qq.com），新物品的图片地址取自 <a href="https://github.com/lvhj4/bingo" target="_blank" rel="noopener">lvhj4/bingo</a> 和 <a href="https://github.com/MuLiuSaMa/NexBox" target="_blank" rel="noopener">MuLiuSaMa/NexBox</a>。</li>
+        <li><b>模式</b>：按产出地所在地图开放的模式推算（零号大坝、长弓溪谷：常规/机密；航天基地、巴克什：机密/绝密；潮汐监狱：绝密），不代表物品在每个模式都一定会刷。</li>
+        <li><b>仍缺</b>：${ITEMS.filter(it => it.grade == null).length} 件品质未知，${ITEMS.filter(it => !it.pic).length} 件没有图片，${ITEMS.filter(it => it.price == null).length} 件没有价格（大多是价格表里已下架的旧物品），${ITEMS.filter(it => !it.sources.length).length} 件没有产出地数据。</li>
       </ul>
       <h3>出现概率</h3>
       <ul>
         <li>官方没有公布过爆率。网上流传的「官方爆率」（例如「红品 0.08% / 0.35% / 0.8%」）找不到可核实的官方出处，<b>本工具不采用</b>。</li>
         <li>「出货记录」页按你自己记录的开箱数据计算实测概率，并给出 95% 置信区间。样本越多越准，红色物品通常要几百上千箱才有参考意义。</li>
-        <li>「模式」（常规/机密/绝密）同样没有可靠的公开数据，只能从你的记录里统计。</li>
+        <li>物品在各模式（常规/机密/绝密）里实际刷不刷、刷多少，同样没有公开数据；页面上的「模式」只是按地图推算，要看真实情况得靠出货记录。</li>
       </ul>`;
   }
   $('a-price').onclick = () => $('a-file').click();
